@@ -9,6 +9,12 @@
 
 - `ng serve`
 
+
+## Lint
+
+- `ng lint`
+- `ng lint --fix`
+
 ## Build
 
 - `ng build`
