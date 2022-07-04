@@ -46,7 +46,7 @@ type Circle = Point & {
 })
 export class AppComponent implements OnInit {
 
-  private readonly scale = 3.5; // 1 pixel = 3 milimeters
+  private readonly scale = 3.5; // 1 pixel = 3.5 millimeters
   private readonly silhouetteScale = 3.2; // So that the silhouette is 178cm tall
   private readonly width = 2200;
   private readonly height = 1800;
