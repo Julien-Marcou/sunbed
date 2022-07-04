@@ -1,0 +1,197 @@
+<canvas id="canvas" class="canvas"></canvas>
+
+<div class="form" (change)="draw()">
+
+  <div class="row">
+    <div class="label">
+      Préconfiguration
+    </div>
+    <div></div>
+    <div>
+      <button type="button" (click)="setDefaultConfig()">Transat</button>
+      <button type="button" (click)="setSeatConfig()">Siège</button>
+      <button type="button" (click)="setBedConfig()">Lit</button>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="label">
+      Traits de construction
+    </div>
+    <div class="value">
+      {{ displayConstructionLines ? 'Oui' : 'Non' }}
+    </div>
+    <input type="checkbox" class="input" [(ngModel)]="displayConstructionLines">
+  </div>
+
+  <div class="row">
+    <div class="label">
+      Points de construction
+    </div>
+    <div class="value">
+      {{ displayConstructionHandles ? 'Oui' : 'Non' }}
+    </div>
+    <input type="checkbox" class="input" [(ngModel)]="displayConstructionHandles">
+  </div>
+
+  <div class="row">
+    <div class="label">
+      Afficher les lattes
+    </div>
+    <div class="value">
+      {{ displayLaths ? 'Oui' : 'Non' }}
+    </div>
+    <input type="checkbox" class="input" [(ngModel)]="displayLaths">
+  </div>
+
+  <div class="row">
+    <div class="label">
+      Afficher la silhouette
+    </div>
+    <div class="value">
+      {{ displaySilhouette ? 'Oui' : 'Non' }}
+    </div>
+    <input type="checkbox" class="input" [(ngModel)]="displaySilhouette">
+  </div>
+
+  <div class="row">
+    <div class="label">
+      Rayon jambe
+    </div>
+    <div class="value">
+      {{ legCircle.radius }}mm
+    </div>
+    <input type="range" class="input" [(ngModel)]="legCircle.radius" (ngModelChange)="draw()" min="100" max="1000">
+  </div>
+
+  <div class="row">
+    <div class="label">
+      Rayon dos
+    </div>
+    <div class="value">
+      {{ backCircle.radius }}mm
+    </div>
+    <input type="range" class="input" [(ngModel)]="backCircle.radius" (ngModelChange)="draw()" min="100" max="1000">
+  </div>
+
+  <div class="row">
+    <div class="label">
+      Angle jambe
+    </div>
+    <div class="value">
+      {{ legAngle }}°
+    </div>
+    <div></div>
+  </div>
+
+  <div class="row">
+    <div class="label">
+      Angle dos
+    </div>
+    <div class="value">
+      {{ backAngle }}°
+    </div>
+    <div></div>
+  </div>
+
+  <div class="row">
+    <div class="label">
+      Tangente jambe
+    </div>
+    <div class="value">
+      {{ legTangentLength }}mm
+    </div>
+    <div></div>
+  </div>
+
+  <div class="row">
+    <div class="label">
+      Arc jambe
+    </div>
+    <div class="value">
+      {{ legArcLength }}mm
+    </div>
+    <div></div>
+  </div>
+
+  <div class="row">
+    <div class="label">
+      Tangente milieu
+    </div>
+    <div class="value">
+      {{ middleTangentLength }}mm
+    </div>
+    <div></div>
+  </div>
+
+  <div class="row">
+    <div class="label">
+      Arc dos
+    </div>
+    <div class="value">
+      {{ backArcLength }}mm
+    </div>
+    <div></div>
+  </div>
+
+  <div class="row">
+    <div class="label">
+      Tangente dos
+    </div>
+    <div class="value">
+      {{ backTangentLength }}mm
+    </div>
+    <div></div>
+  </div>
+
+  <div class="row">
+    <div class="label">
+      Longueur totale
+    </div>
+    <div class="value">
+      {{ legTangentLength + legArcLength + middleTangentLength + backArcLength + backTangentLength }}mm
+    </div>
+    <div></div>
+  </div>
+
+  <div class="row">
+    <div class="label">
+      Largeur latte
+    </div>
+    <div class="value">
+      {{ lathWidth }}mm
+    </div>
+    <input type="range" class="input" [(ngModel)]="lathWidth" (ngModelChange)="draw()" min="20" max="100">
+  </div>
+
+  <div class="row">
+    <div class="label">
+      Espacement latte
+    </div>
+    <div class="value">
+      {{ lathGap }}mm
+    </div>
+    <input type="range" class="input" [(ngModel)]="lathGap" (ngModelChange)="draw()" min="2" max="30">
+  </div>
+
+  <div class="row">
+    <div class="label">
+      Nombre de lattes
+    </div>
+    <div class="value">
+      {{ lathCount }} lattes
+    </div>
+    <div></div>
+  </div>
+
+  <div class="row">
+    <div class="label">
+      Longueur restante
+    </div>
+    <div class="value">
+      {{ remainingLength }}mm
+    </div>
+    <div></div>
+  </div>
+
+</div>

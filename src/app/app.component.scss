@@ -1,3 +1,49 @@
 :host {
-  display: block;
+  display: grid;
+  padding: 1rem;
+  grid-gap: 1rem;
+  grid-template-columns: max-content 1fr;
+  margin: 0 auto;
+  max-width: 1200px;
+}
+
+.canvas {
+  border: 1px solid #ccc;
+  cursor: var(--cursor, default);
+}
+
+.form {
+  display: grid;
+  grid-template-columns: max-content max-content 1fr;
+  grid-gap: 1rem;
+  align-items: center;
+
+  .row {
+    display: contents;
+  }
+
+  .input {
+    width: auto;
+
+    &[type="checkbox"] {
+      width: 1rem;
+      height: 1rem;
+    }
+  }
+
+  button + button {
+    margin-left: 0.6rem;
+  }
+}
+
+@media (max-width: 1200px) {
+  :host {
+    grid-template-rows: max-content 1fr;
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .form {
+    min-width: 600px;
+  }
 }

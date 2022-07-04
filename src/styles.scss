@@ -1,0 +1,10 @@
+@import "styles/reset";
+
+button {
+  padding: 0.4rem 0.7rem;
+  border-radius: 3px;
+  background-color: #eee;
+  &:hover {
+    background-color: #ccc;
+  }
+}
