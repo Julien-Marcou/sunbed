@@ -63,6 +63,8 @@ export class AppComponent implements OnInit {
   protected backTangentLength = 0;
   protected legArcLength = 0;
   protected backArcLength = 0;
+  protected legArcThickness = 0;
+  protected backArcThickness = 0;
   protected remainingLength = 0;
   protected displayConstructionLines = true;
   protected displayConstructionHandles = true;
@@ -241,13 +243,17 @@ export class AppComponent implements OnInit {
     const legEndAngle = this.getAngle(this.legCircle, legTangent.p2);
     this.drawArc(this.legCircle, legStartAngle, legEndAngle, true);
     this.legArcLength = Math.round(this.getArcLength(this.legCircle, legStartAngle, legEndAngle));
-    this.legAngle = Math.round(Math.abs(legEndAngle - legStartAngle) * RADIAN_TO_DEGREE);
+    const legAngle = Math.abs(legEndAngle - legStartAngle);
+    this.legAngle = Math.round(legAngle * RADIAN_TO_DEGREE);
+    this.legArcThickness = Math.ceil(this.legCircle.radius - (this.legCircle.radius *  Math.cos(legAngle / 2)));
 
     const backStartAngle = this.getAngle(this.backCircle, backTangent.p1);
     const backEndAngle = this.getAngle(this.backCircle, middleTangent.p2);
     this.drawArc(this.backCircle, backStartAngle, backEndAngle);
     this.backArcLength = Math.round(this.getArcLength(this.backCircle, backStartAngle, backEndAngle));
-    this.backAngle = Math.round(Math.abs(backEndAngle - backStartAngle) * RADIAN_TO_DEGREE);
+    const backAngle = Math.abs(backEndAngle - backStartAngle);
+    this.backAngle = Math.round(backAngle * RADIAN_TO_DEGREE);
+    this.backArcThickness = Math.ceil(this.backCircle.radius - (this.backCircle.radius *  Math.cos(backAngle / 2)));
 
     // Circles angles
     if (this.displayConstructionLines) {
