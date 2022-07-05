@@ -82,9 +82,11 @@ export class AppComponent implements OnInit {
   private readonly circles: Array<Circle>;
 
   private silhouette!: ImageBitmap;
-  private canvas!: HTMLCanvasElement;
-  private context!: CanvasRenderingContext2D;
-  private canvasOffset!: Point;
+  private sketchCanvas!: HTMLCanvasElement;
+  private sketchContext!: CanvasRenderingContext2D;
+  private blueprintCanvas!: HTMLCanvasElement;
+  private blueprintContext!: CanvasRenderingContext2D;
+  private sketchCanvasOffset!: Point;
   private hoveredHandle?: Point;
   private hoveredCircle?: Circle;
   private drag?: Drag<Point>;
@@ -101,19 +103,23 @@ export class AppComponent implements OnInit {
 
   public async ngOnInit(): Promise<void> {
     this.silhouette = await this.loadFromUrl('/assets/silhouette.png');
-    this.canvas = document.getElementById('canvas') as HTMLCanvasElement;
-    this.canvas.width = this.width / this.scale;
-    this.canvas.height = this.height / this.scale;
-    const context = this.canvas.getContext('2d');
-    if (!context) {
-      throw new Error('Unable to retrieve 2D context');
-    }
-    this.context =  context;
-    this.context.scale(1 / this.scale, 1 / this.scale);
-    this.canvasOffset = {
-      x: this.canvas.offsetLeft + (this.canvas.offsetWidth - this.canvas.clientWidth) / 2,
-      y: this.canvas.offsetTop + (this.canvas.offsetHeight - this.canvas.clientHeight) / 2,
+
+    this.sketchCanvas = document.getElementById('sketch-canvas') as HTMLCanvasElement;
+    this.sketchCanvas.width = this.width / this.scale;
+    this.sketchCanvas.height = this.height / this.scale;
+    this.sketchContext = this.get2DContext(this.sketchCanvas);
+    this.sketchContext.scale(1 / this.scale, 1 / this.scale);
+    this.sketchCanvasOffset = {
+      x: this.sketchCanvas.offsetLeft + (this.sketchCanvas.offsetWidth - this.sketchCanvas.clientWidth) / 2,
+      y: this.sketchCanvas.offsetTop + (this.sketchCanvas.offsetHeight - this.sketchCanvas.clientHeight) / 2,
     };
+
+    this.blueprintCanvas = document.getElementById('blueprint-canvas') as HTMLCanvasElement;
+    this.blueprintCanvas.width = this.width / this.scale;
+    this.blueprintCanvas.height = this.height / this.scale;
+    this.blueprintContext = this.get2DContext(this.blueprintCanvas);
+    this.blueprintContext.scale(1 / this.scale, 1 / this.scale);
+
     this.initEvents();
     this.setDefaultConfig();
   }
@@ -173,37 +179,37 @@ export class AppComponent implements OnInit {
   }
 
   private initEvents(): void {
-    this.canvas.addEventListener('pointerdown', (event) => {
+    this.sketchCanvas.addEventListener('pointerdown', (event) => {
       this.pointerDown(event);
     });
-    this.canvas.addEventListener('pointermove', (event) => {
+    this.sketchCanvas.addEventListener('pointermove', (event) => {
       this.pointerMove(event);
     });
-    this.canvas.addEventListener('pointerup', (event) => {
+    this.sketchCanvas.addEventListener('pointerup', (event) => {
       this.pointerUp(event);
     });
-    this.canvas.addEventListener('pointerout', () => {
+    this.sketchCanvas.addEventListener('pointerout', () => {
       this.pointerOut();
     });
   }
 
   protected draw(): void {
-    this.context.clearRect(0, 0, this.width, this.height);
-    this.context.strokeStyle = this.displayConstructionLines ? '#000' : '#bbb';
-    this.context.fillStyle = '#fff';
-    this.context.lineWidth = 1 * this.scale;
-    this.context.fillRect(0, 0, this.width, this.height);
+    this.sketchContext.clearRect(0, 0, this.width, this.height);
+    this.sketchContext.strokeStyle = this.displayConstructionLines ? '#000' : '#bbb';
+    this.sketchContext.fillStyle = '#fff';
+    this.sketchContext.lineWidth = 1 * this.scale;
+    this.sketchContext.fillRect(0, 0, this.width, this.height);
 
     // Silhouette
     if (this.displaySilhouette) {
-      this.context.drawImage(this.silhouette, 130, 470, this.silhouette.width * this.silhouetteScale, this.silhouette.height * this.silhouetteScale);
+      this.sketchContext.drawImage(this.silhouette, 130, 470, this.silhouette.width * this.silhouetteScale, this.silhouette.height * this.silhouetteScale);
     }
 
     // Handles
     if (this.displayConstructionHandles) {
-      this.context.save();
-      this.context.strokeStyle = '#000';
-      this.context.fillStyle = '#ccc';
+      this.sketchContext.save();
+      this.sketchContext.strokeStyle = '#000';
+      this.sketchContext.fillStyle = '#ccc';
       this.handles.forEach((circle) => {
         const handle = {
           ...circle,
@@ -211,19 +217,19 @@ export class AppComponent implements OnInit {
         };
         this.drawCircle(handle, true);
       });
-      this.context.restore();
+      this.sketchContext.restore();
     }
 
     // Circles
     if (this.displayConstructionLines) {
-      this.context.save();
-      this.context.strokeStyle = '#ccc';
-      this.context.fillStyle = '#fff0';
-      this.context.setLineDash(this.lineDash);
+      this.sketchContext.save();
+      this.sketchContext.strokeStyle = '#ccc';
+      this.sketchContext.fillStyle = '#fff0';
+      this.sketchContext.setLineDash(this.lineDash);
       this.circles.forEach((circle) => {
         this.drawCircle(circle);
       });
-      this.context.restore();
+      this.sketchContext.restore();
     }
 
     // Circle tangents
@@ -261,63 +267,63 @@ export class AppComponent implements OnInit {
 
     // Circles angles
     if (this.displayConstructionLines) {
-      this.context.save();
+      this.sketchContext.save();
       this.drawAngle(this.legCircle, legTangent.p2, middleTangent.p1);
       this.drawAngle(this.backCircle, middleTangent.p2, backTangent.p1);
-      this.context.restore();
+      this.sketchContext.restore();
     }
 
     // Laths
     if (this.displayLaths) {
       this.lathCount = 0;
-      this.context.save();
-      this.context.strokeStyle = '#f00';
+      this.sketchContext.save();
+      this.sketchContext.strokeStyle = '#f00';
       const remainingHeadGapToFill = this.drawLathAlongSegment(backTangent);
       const remainingBackCircleGapToFill = this.drawLathAlongArc(this.backCircle, backStartAngle, backEndAngle, -remainingHeadGapToFill);
       const remainingMiddleToFill = this.drawLathAlongSegment(middleTangent, -remainingBackCircleGapToFill);
       const remainingLegCircleGapToFill = this.drawLathAlongArc(this.legCircle, legStartAngle, legEndAngle, -remainingMiddleToFill, true);
       const remaingGap = this.drawLathAlongSegment(legTangent, -remainingLegCircleGapToFill);
       this.remainingLength = Math.round(remaingGap + this.lathGap);
-      this.context.restore();
+      this.sketchContext.restore();
     }
   }
 
   private drawSegment(point1: Point, point2: Point): void {
-    this.context.beginPath();
-    this.context.moveTo(point1.x, point1.y);
-    this.context.lineTo(point2.x, point2.y);
-    this.context.stroke();
+    this.sketchContext.beginPath();
+    this.sketchContext.moveTo(point1.x, point1.y);
+    this.sketchContext.lineTo(point2.x, point2.y);
+    this.sketchContext.stroke();
   }
 
   private drawCircle(circle: Circle, fill?: boolean): void {
-    this.context.beginPath();
-    this.context.arc(circle.x, circle.y, circle.radius, 0, FULL_CIRCLE);
-    this.context.closePath();
+    this.sketchContext.beginPath();
+    this.sketchContext.arc(circle.x, circle.y, circle.radius, 0, FULL_CIRCLE);
+    this.sketchContext.closePath();
     if (fill) {
-      this.context.fill();
+      this.sketchContext.fill();
     }
-    this.context.stroke();
+    this.sketchContext.stroke();
   }
 
   private drawArc(circle: Circle, startAngle: number, endAngle: number, counterClockwise?: boolean): void {
-    this.context.beginPath();
-    this.context.arc(circle.x, circle.y, circle.radius, startAngle, endAngle, counterClockwise);
-    this.context.stroke();
+    this.sketchContext.beginPath();
+    this.sketchContext.arc(circle.x, circle.y, circle.radius, startAngle, endAngle, counterClockwise);
+    this.sketchContext.stroke();
   }
 
   private drawAngle(circle: Circle, point1: Point, point2: Point): void {
-    this.context.save();
-    this.context.strokeStyle = '#ccc';
-    this.context.setLineDash(this.lineDash);
-    this.context.beginPath();
-    this.context.moveTo(circle.x, circle.y);
-    this.context.lineTo(point1.x, point1.y);
-    this.context.stroke();
-    this.context.beginPath();
-    this.context.moveTo(circle.x, circle.y);
-    this.context.lineTo(point2.x, point2.y);
-    this.context.stroke();
-    this.context.restore();
+    this.sketchContext.save();
+    this.sketchContext.strokeStyle = '#ccc';
+    this.sketchContext.setLineDash(this.lineDash);
+    this.sketchContext.beginPath();
+    this.sketchContext.moveTo(circle.x, circle.y);
+    this.sketchContext.lineTo(point1.x, point1.y);
+    this.sketchContext.stroke();
+    this.sketchContext.beginPath();
+    this.sketchContext.moveTo(circle.x, circle.y);
+    this.sketchContext.lineTo(point2.x, point2.y);
+    this.sketchContext.stroke();
+    this.sketchContext.restore();
   }
 
   private drawLathAlongSegment(segment: Segment, offset = 0): number {
@@ -336,16 +342,16 @@ export class AppComponent implements OnInit {
       const yStart = start * sinAngle;
       const xEnd = end * cosAngle;
       const yEnd = end * sinAngle;
-      this.context.beginPath();
-      this.context.moveTo(
+      this.sketchContext.beginPath();
+      this.sketchContext.moveTo(
         segment.p2.x - xStart,
         segment.p2.y - yStart,
       );
-      this.context.lineTo(
+      this.sketchContext.lineTo(
         segment.p2.x - xEnd,
         segment.p2.y - yEnd,
       );
-      this.context.stroke();
+      this.sketchContext.stroke();
     }
     return remainingGapToFill;
   }
@@ -370,22 +376,22 @@ export class AppComponent implements OnInit {
       const yStart = circle.radius * Math.sin(lathStartAngle);
       const xEnd = circle.radius * Math.cos(lathEndAngle);
       const yEnd = circle.radius * Math.sin(lathEndAngle);
-      this.context.beginPath();
-      this.context.moveTo(
+      this.sketchContext.beginPath();
+      this.sketchContext.moveTo(
         circle.x + xStart,
         circle.y + yStart,
       );
-      this.context.lineTo(
+      this.sketchContext.lineTo(
         circle.x + xEnd,
         circle.y + yEnd,
       );
-      this.context.stroke();
+      this.sketchContext.stroke();
     }
     return remainingGapToFill;
   }
 
   private pointerDown(event: PointerEvent): void {
-    this.canvas.setPointerCapture(event.pointerId);
+    this.sketchCanvas.setPointerCapture(event.pointerId);
     if (this.hoveredHandle) {
       const pointerPosition = this.getPointerPositionAt(event);
       this.drag = {
@@ -397,7 +403,7 @@ export class AppComponent implements OnInit {
         dragOrigin: pointerPosition,
       };
       this.hoveredHandle = undefined;
-      this.canvas.style.setProperty('--cursor', 'grabbing');
+      this.sketchCanvas.style.setProperty('--cursor', 'grabbing');
     }
     else if (this.hoveredCircle) {
       this.resize = {
@@ -423,7 +429,7 @@ export class AppComponent implements OnInit {
       const distance = this.getDistance(pointerPosition, this.resize.element);
       this.resize.element.radius = Math.round(this.clampRadius(distance));
       this.draw();
-      this.canvas.style.setProperty('--cursor', `${this.getDirection(this.resize.element, pointerPosition)}-resize`);
+      this.sketchCanvas.style.setProperty('--cursor', `${this.getDirection(this.resize.element, pointerPosition)}-resize`);
     }
     else {
       this.hoveredHandle = undefined;
@@ -431,30 +437,30 @@ export class AppComponent implements OnInit {
 
       this.hoveredHandle = this.getHandleAt(pointerPosition);
       if (this.hoveredHandle) {
-        this.canvas.style.setProperty('--cursor', 'grab');
+        this.sketchCanvas.style.setProperty('--cursor', 'grab');
         return;
       }
       this.hoveredCircle = this.getCircleAt(pointerPosition);
       if (this.hoveredCircle) {
-        this.canvas.style.setProperty('--cursor', `${this.getDirection(this.hoveredCircle, pointerPosition)}-resize`);
+        this.sketchCanvas.style.setProperty('--cursor', `${this.getDirection(this.hoveredCircle, pointerPosition)}-resize`);
         return;
       }
 
-      this.canvas.style.setProperty('--cursor', 'default');
+      this.sketchCanvas.style.setProperty('--cursor', 'default');
     }
   }
 
   private pointerUp(event: PointerEvent): void {
-    this.canvas.releasePointerCapture(event.pointerId);
+    this.sketchCanvas.releasePointerCapture(event.pointerId);
     this.drag = undefined;
     this.resize = undefined;
-    this.canvas.style.setProperty('--cursor', 'default');
+    this.sketchCanvas.style.setProperty('--cursor', 'default');
   }
 
   private pointerOut(): void {
     if (this.hoveredHandle) {
       this.hoveredHandle = undefined;
-      this.canvas.style.setProperty('--cursor', 'default');
+      this.sketchCanvas.style.setProperty('--cursor', 'default');
     }
   }
 
@@ -510,8 +516,8 @@ export class AppComponent implements OnInit {
 
   private getPointerPositionAt(event: PointerEvent): Point {
     return {
-      x: (event.pageX - this.canvasOffset.x) * this.scale,
-      y: (event.pageY - this.canvasOffset.y) * this.scale,
+      x: (event.pageX - this.sketchCanvasOffset.x) * this.scale,
+      y: (event.pageY - this.sketchCanvasOffset.y) * this.scale,
     };
   }
 
@@ -547,6 +553,14 @@ export class AppComponent implements OnInit {
 
   private clampRadius(value: number): number {
     return Math.min(Math.max(100, value), 1000);
+  }
+
+  private get2DContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
+    const context = canvas.getContext('2d');
+    if (!context) {
+      throw new Error('Unable to retrieve 2D context');
+    }
+    return context;
   }
 
   private async loadFromUrl(src: string): Promise<ImageBitmap> {

@@ -5,6 +5,13 @@
   grid-template-columns: max-content 1fr;
   margin: 0 auto;
   max-width: 1200px;
+  align-items: flex-start;
+}
+
+.canvases {
+  display: grid;
+  grid-template-rows: max-content max-content;
+  grid-gap: 1rem;
 }
 
 .canvas {
@@ -17,6 +24,8 @@
   grid-template-columns: max-content max-content 1fr;
   grid-gap: 1rem;
   align-items: center;
+  position: sticky;
+  top: 1rem;
 
   .row {
     display: contents;
