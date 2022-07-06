@@ -1,19 +1,21 @@
-<div class="canvases">
-  <canvas id="sketch-canvas" class="canvas"></canvas>
-  <canvas id="blueprint-canvas" class="canvas"></canvas>
-</div>
-
 <div class="form" (change)="draw()">
 
-  <div class="row">
+  <div class="row header">
     <div class="label">
-      Préconfiguration
+      Préconfigurations
     </div>
-    <div></div>
     <div>
       <button type="button" (click)="setDefaultConfig()">Transat</button>
       <button type="button" (click)="setSeatConfig()">Siège</button>
       <button type="button" (click)="setBedConfig()">Lit</button>
+    </div>
+  </div>
+
+  <div class="row header">
+    <div class="label">
+      <strong>
+        Schéma
+      </strong>
     </div>
   </div>
 
@@ -77,74 +79,12 @@
     <input type="range" class="input" [(ngModel)]="backCircle.radius" (ngModelChange)="draw()" min="100" max="1000">
   </div>
 
-  <div class="row">
+  <div class="row header">
     <div class="label">
-      Angle jambe
+      <strong>
+        Lattage
+      </strong>
     </div>
-    <div class="value">
-      {{ legAngle }}°
-    </div>
-    <div></div>
-  </div>
-
-  <div class="row">
-    <div class="label">
-      Angle dos
-    </div>
-    <div class="value">
-      {{ backAngle }}°
-    </div>
-    <div></div>
-  </div>
-
-  <div class="row">
-    <div class="label">
-      Tangente jambe
-    </div>
-    <div class="value">
-      {{ legTangentLength }}mm
-    </div>
-    <div></div>
-  </div>
-
-  <div class="row">
-    <div class="label">
-      Arc jambe
-    </div>
-    <div class="value">
-      {{ legArcLength }}mm
-    </div>
-    <div></div>
-  </div>
-
-  <div class="row">
-    <div class="label">
-      Tangente milieu
-    </div>
-    <div class="value">
-      {{ middleTangentLength }}mm
-    </div>
-    <div></div>
-  </div>
-
-  <div class="row">
-    <div class="label">
-      Arc dos
-    </div>
-    <div class="value">
-      {{ backArcLength }}mm
-    </div>
-    <div></div>
-  </div>
-
-  <div class="row">
-    <div class="label">
-      Tangente dos
-    </div>
-    <div class="value">
-      {{ backTangentLength }}mm
-    </div>
-    <div></div>
   </div>
 
   <div class="row">
@@ -155,30 +95,6 @@
       {{ legTangentLength + legArcLength + middleTangentLength + backArcLength + backTangentLength }}mm
     </div>
     <div></div>
-  </div>
-
-  <div class="row">
-    <div class="label">
-      Planche jambe
-    </div>
-    <div class="value">
-      {{ legArcChordLength }}×{{ legArcThickness }}mm
-    </div>
-    <div>
-      (+ épaisseur linteau)
-    </div>
-  </div>
-
-  <div class="row">
-    <div class="label">
-      Planche dos
-    </div>
-    <div class="value">
-      {{ backArcChordLength }}×{{ backArcThickness }}mm
-    </div>
-    <div>
-      (+ épaisseur linteau)
-    </div>
   </div>
 
   <div class="row">
@@ -221,4 +137,27 @@
     <div></div>
   </div>
 
+  <div class="row header">
+    <div class="label">
+      <strong>
+        Linteau
+      </strong>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="label">
+      Hauteur linteau
+    </div>
+    <div class="value">
+      {{ lintelHeight }}mm
+    </div>
+    <input type="range" class="input" [(ngModel)]="lintelHeight" (ngModelChange)="draw()" min="20" max="80">
+  </div>
+
+</div>
+
+<div class="canvases">
+  <canvas id="sketch-canvas" class="canvas"></canvas>
+  <canvas id="blueprint-canvas" class="canvas"></canvas>
 </div>

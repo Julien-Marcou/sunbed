@@ -2,7 +2,7 @@
   display: grid;
   padding: 1rem;
   grid-gap: 1rem;
-  grid-template-columns: max-content 1fr;
+  grid-template-columns: 1fr max-content;
   margin: 0 auto;
   max-width: 1200px;
   align-items: flex-start;
@@ -29,6 +29,18 @@
 
   .row {
     display: contents;
+
+    &.header {
+      grid-column: span 3;
+      display: grid;
+      grid-template-columns: max-content 1fr;
+      align-items: center;
+      grid-gap: 3rem;
+    }
+
+    + .header {
+      margin-top: 1rem;
+    }
   }
 
   .input {
@@ -54,5 +66,7 @@
 
   .form {
     min-width: 600px;
+    position: initial;
+    top: inherit;
   }
 }

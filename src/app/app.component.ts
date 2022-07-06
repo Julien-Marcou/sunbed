@@ -1,28 +1,9 @@
 import { Component, OnInit } from '@angular/core';
-
-/* eslint-disable @typescript-eslint/no-unused-vars */
-const SIXTEENTH_CIRCLE = Math.PI / 8;
-const EIGHTH_CIRCLE = Math.PI / 4;
-const QUARTER_CIRCLE = Math.PI / 2;
-const HALF_CIRCLE = Math.PI;
-const FULL_CIRCLE = Math.PI * 2;
-const RADIAN_TO_DEGREE = 180 / Math.PI;
-/* eslint-enable @typescript-eslint/no-unused-vars */
-
-type Point = {
-  x: number;
-  y: number;
-};
-
-type Vector = {
-  dx: number;
-  dy: number;
-};
-
-type Segment = {
-  p1: Point;
-  p2: Point;
-};
+import { FULL_CIRCLE, HALF_CIRCLE } from '../constants/circle.constants';
+import { ArcLintel } from '../model/arc-lintel';
+import { Geometry } from '../model/geometry';
+import { StraightLintel } from '../model/straight-lintel';
+import type { Circle, Point, Segment, Vector } from '../model/geometry';
 
 type Drag<T> = {
   element: T;
@@ -35,10 +16,6 @@ type Resize<T> = {
   elementSize: number;
 };
 
-type Circle = Point & {
-  radius: number;
-};
-
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
@@ -46,28 +23,28 @@ type Circle = Point & {
 })
 export class AppComponent implements OnInit {
 
-  private readonly scale = 3.5; // 1 pixel = 3.5 millimeters
+  private readonly sketchScale = 3.5; // 1 pixel = 3.5 millimeters
+  private readonly sketchWidth = 2200;
+  private readonly sketchHeight = 1800;
+
+  private blueprintScale = 2; // 1 pixel = 2 millimeters
+  private blueprintWidth = 1200;
+  private blueprintHeight = 2200;
+
   private readonly silhouetteScale = 3.2; // So that the silhouette is 178cm tall
-  private readonly width = 2200;
-  private readonly height = 1800;
   private readonly handleRadius = 40;
-  private readonly lineDash = [8 * this.scale, 10 * this.scale];
+  private readonly lineDash = [8 * this.sketchScale, 10 * this.sketchScale];
 
   protected lathWidth = 55;
   protected lathGap = 18;
   protected lathCount = 0;
-  protected legAngle = 0;
-  protected backAngle = 0;
   protected legTangentLength = 0;
   protected middleTangentLength = 0;
   protected backTangentLength = 0;
   protected legArcLength = 0;
-  protected legArcChordLength = 0;
   protected backArcLength = 0;
-  protected backArcChordLength = 0;
-  protected legArcThickness = 0;
-  protected backArcThickness = 0;
   protected remainingLength = 0;
+  protected lintelHeight = 40;
   protected displayConstructionLines = true;
   protected displayConstructionHandles = true;
   protected displayLaths = true;
@@ -105,22 +82,31 @@ export class AppComponent implements OnInit {
     this.silhouette = await this.loadFromUrl('/assets/silhouette.png');
 
     this.sketchCanvas = document.getElementById('sketch-canvas') as HTMLCanvasElement;
-    this.sketchCanvas.width = this.width / this.scale;
-    this.sketchCanvas.height = this.height / this.scale;
+    this.sketchCanvas.width = this.sketchWidth / this.sketchScale;
+    this.sketchCanvas.height = this.sketchHeight / this.sketchScale;
     this.sketchContext = this.get2DContext(this.sketchCanvas);
-    this.sketchContext.scale(1 / this.scale, 1 / this.scale);
-    this.sketchCanvasOffset = {
-      x: this.sketchCanvas.offsetLeft + (this.sketchCanvas.offsetWidth - this.sketchCanvas.clientWidth) / 2,
-      y: this.sketchCanvas.offsetTop + (this.sketchCanvas.offsetHeight - this.sketchCanvas.clientHeight) / 2,
-    };
+    this.sketchContext.scale(1 / this.sketchScale, 1 / this.sketchScale);
 
     this.blueprintCanvas = document.getElementById('blueprint-canvas') as HTMLCanvasElement;
-    this.blueprintCanvas.width = this.width / this.scale;
-    this.blueprintCanvas.height = this.height / this.scale;
+    this.blueprintCanvas.width = this.blueprintWidth / this.blueprintScale;
+    this.blueprintCanvas.height = this.blueprintHeight / this.blueprintScale;
     this.blueprintContext = this.get2DContext(this.blueprintCanvas);
-    this.blueprintContext.scale(1 / this.scale, 1 / this.scale);
+    this.blueprintContext.scale(1 / this.blueprintScale, 1 / this.blueprintScale);
 
-    this.initEvents();
+
+    const updateCanvasOffset = (): void => {
+      if (!this.sketchCanvasOffset) {
+        this.initEvents();
+      }
+      this.sketchCanvasOffset = {
+        x: this.sketchCanvas.offsetLeft + (this.sketchCanvas.offsetWidth - this.sketchCanvas.clientWidth) / 2,
+        y: this.sketchCanvas.offsetTop + (this.sketchCanvas.offsetHeight - this.sketchCanvas.clientHeight) / 2,
+      };
+    };
+    const resizeObserver = new ResizeObserver(updateCanvasOffset);
+    resizeObserver.observe(document.documentElement);
+    resizeObserver.observe(this.sketchCanvas);
+
     this.setDefaultConfig();
   }
 
@@ -194,11 +180,9 @@ export class AppComponent implements OnInit {
   }
 
   protected draw(): void {
-    this.sketchContext.clearRect(0, 0, this.width, this.height);
+    this.clear(this.sketchContext, this.sketchWidth, this.sketchHeight);
     this.sketchContext.strokeStyle = this.displayConstructionLines ? '#000' : '#bbb';
-    this.sketchContext.fillStyle = '#fff';
-    this.sketchContext.lineWidth = 1 * this.scale;
-    this.sketchContext.fillRect(0, 0, this.width, this.height);
+    this.sketchContext.lineWidth = 1 * this.sketchScale;
 
     // Silhouette
     if (this.displaySilhouette) {
@@ -232,38 +216,34 @@ export class AppComponent implements OnInit {
       this.sketchContext.restore();
     }
 
-    // Circle tangents
-    const legTangent = this.getTangent({...this.footPoint, radius: 0}, this.legCircle, true);
-    const middleTangent = this.getTangent(this.legCircle, this.backCircle);
-    const backTangent = this.getTangent(this.backCircle, {...this.headPoint, radius: 0}, true);
+    // Circle constants
+    const legTangent = Geometry.getTangent({...this.footPoint, radius: 0}, this.legCircle, true);
+    const middleTangent = Geometry.getTangent(this.legCircle, this.backCircle);
+    const backTangent = Geometry.getTangent(this.backCircle, {...this.headPoint, radius: 0}, true);
     if (!backTangent || !middleTangent || !legTangent) {
       return;
     }
+    const legStartAngle = Geometry.getAngle(this.legCircle, middleTangent.p1);
+    const legEndAngle = Geometry.getAngle(this.legCircle, legTangent.p2);
+    const legAngle = Math.abs(legEndAngle - legStartAngle);
+    const backStartAngle = Geometry.getAngle(this.backCircle, backTangent.p1);
+    const backEndAngle = Geometry.getAngle(this.backCircle, middleTangent.p2);
+    const backAngle = Math.abs(backEndAngle - backStartAngle);
+    if (backAngle > HALF_CIRCLE || backStartAngle > backEndAngle || backStartAngle < 0 || legAngle > HALF_CIRCLE || legEndAngle > legStartAngle || legEndAngle > 0) {
+      return;
+    }
+
+    // Circle tangents
     this.drawSegment(legTangent.p1, legTangent.p2);
     this.drawSegment(middleTangent.p1, middleTangent.p2);
     this.drawSegment(backTangent.p1, backTangent.p2);
-    this.legTangentLength = Math.round(this.getDistance(legTangent.p1, legTangent.p2));
-    this.middleTangentLength = Math.round(this.getDistance(middleTangent.p1, middleTangent.p2));
-    this.backTangentLength = Math.round(this.getDistance(backTangent.p1, backTangent.p2));
+    this.legTangentLength = Math.round(Geometry.getDistance(legTangent.p1, legTangent.p2));
+    this.middleTangentLength = Math.round(Geometry.getDistance(middleTangent.p1, middleTangent.p2));
+    this.backTangentLength = Math.round(Geometry.getDistance(backTangent.p1, backTangent.p2));
 
     // Circle arcs
-    const legStartAngle = this.getAngle(this.legCircle, middleTangent.p1);
-    const legEndAngle = this.getAngle(this.legCircle, legTangent.p2);
     this.drawArc(this.legCircle, legStartAngle, legEndAngle, true);
-    this.legArcLength = Math.round(this.getArcLength(this.legCircle, legStartAngle, legEndAngle));
-    const legAngle = Math.abs(legEndAngle - legStartAngle);
-    this.legAngle = Math.round(legAngle * RADIAN_TO_DEGREE);
-    this.legArcChordLength = Math.round(this.legCircle.radius *  Math.sin(legAngle / 2) * 2);
-    this.legArcThickness = Math.round(this.legCircle.radius - (this.legCircle.radius *  Math.cos(legAngle / 2)));
-
-    const backStartAngle = this.getAngle(this.backCircle, backTangent.p1);
-    const backEndAngle = this.getAngle(this.backCircle, middleTangent.p2);
     this.drawArc(this.backCircle, backStartAngle, backEndAngle);
-    this.backArcLength = Math.round(this.getArcLength(this.backCircle, backStartAngle, backEndAngle));
-    const backAngle = Math.abs(backEndAngle - backStartAngle);
-    this.backAngle = Math.round(backAngle * RADIAN_TO_DEGREE);
-    this.backArcChordLength = Math.round(this.backCircle.radius *  Math.sin(backAngle / 2) * 2);
-    this.backArcThickness = Math.round(this.backCircle.radius - (this.backCircle.radius *  Math.cos(backAngle / 2)));
 
     // Circles angles
     if (this.displayConstructionLines) {
@@ -286,6 +266,66 @@ export class AppComponent implements OnInit {
       this.remainingLength = Math.round(remaingGap + this.lathGap);
       this.sketchContext.restore();
     }
+
+    // Straight lintel blueprints
+    const legLintel = new StraightLintel('Linteau jambe', this.blueprintContext, this.legTangentLength, this.lintelHeight);
+    legLintel.render();
+    const middleLintel = new StraightLintel('Linteau milieu', this.blueprintContext, this.middleTangentLength, this.lintelHeight);
+    middleLintel.render();
+    const backLintel = new StraightLintel('Linteau dos', this.blueprintContext, this.backTangentLength, this.lintelHeight);
+    backLintel.render();
+
+    // Arc lintel blueprints
+    const legArc = new ArcLintel('Arc jambe', this.blueprintContext, this.legCircle.radius, legAngle, this.lintelHeight, false);
+    legArc.render();
+    const backArc = new ArcLintel('Arc dos', this.blueprintContext, this.backCircle.radius, backAngle, this.lintelHeight, true);
+    backArc.render();
+
+    // Update blueprint canvas size
+    const padding = 40;
+    const margin = 40;
+    this.blueprintWidth = Math.max(
+      legLintel.getWidth(),
+      middleLintel.getWidth(),
+      backLintel.getWidth(),
+      legArc.getWidth(),
+      backArc.getWidth(),
+    ) + padding * 2;
+    this.blueprintHeight = (
+      legLintel.getHeight() +
+      middleLintel.getHeight() +
+      backLintel.getHeight() +
+      legArc.getHeight() +
+      backArc.getHeight()
+    ) + margin * 4 + padding * 2;
+    this.blueprintScale = this.blueprintWidth / (this.sketchWidth / this.sketchScale);
+    this.blueprintCanvas.width = this.blueprintWidth / this.blueprintScale;
+    this.blueprintCanvas.height = this.blueprintHeight / this.blueprintScale;
+    this.blueprintContext.scale(1 / this.blueprintScale, 1 / this.blueprintScale);
+
+    // Repaint it as resizing a canvas clears it
+    this.clear(this.blueprintContext, this.blueprintWidth, this.blueprintHeight);
+    this.blueprintContext.lineWidth = 1 * this.blueprintScale;
+    this.blueprintContext.save();
+    this.blueprintContext.translate(padding, padding);
+    legLintel.render();
+    this.blueprintContext.translate(0, legLintel.getHeight() + margin);
+    middleLintel.render();
+    this.blueprintContext.translate(0, middleLintel.getHeight() + margin);
+    backLintel.render();
+    this.blueprintContext.translate(0, backLintel.getHeight() + margin);
+    legArc.render();
+    this.blueprintContext.translate(0, legArc.getHeight() + margin);
+    backArc.render();
+    this.blueprintContext.restore();
+  }
+
+  private clear(context: CanvasRenderingContext2D, width: number, height: number): void {
+    context.clearRect(0, 0, width, height);
+    context.save();
+    context.fillStyle = '#fff';
+    context.fillRect(0, 0, width, height);
+    context.restore();
   }
 
   private drawSegment(point1: Point, point2: Point): void {
@@ -327,8 +367,8 @@ export class AppComponent implements OnInit {
   }
 
   private drawLathAlongSegment(segment: Segment, offset = 0): number {
-    const segmentLength = this.getDistance(segment.p1, segment.p2);
-    const segmentAngle = this.getAngle(segment.p1, segment.p2);
+    const segmentLength = Geometry.getDistance(segment.p1, segment.p2);
+    const segmentAngle = Geometry.getAngle(segment.p1, segment.p2);
     const lathAndGapWidth = this.lathWidth + this.lathGap;
     const lathCount = Math.floor((segmentLength - offset + this.lathGap) / lathAndGapWidth);
     this.lathCount += lathCount;
@@ -426,10 +466,10 @@ export class AppComponent implements OnInit {
       this.draw();
     }
     else if (this.resize) {
-      const distance = this.getDistance(pointerPosition, this.resize.element);
+      const distance = Geometry.getDistance(pointerPosition, this.resize.element);
       this.resize.element.radius = Math.round(this.clampRadius(distance));
       this.draw();
-      this.sketchCanvas.style.setProperty('--cursor', `${this.getDirection(this.resize.element, pointerPosition)}-resize`);
+      this.sketchCanvas.style.setProperty('--cursor', `${Geometry.getDirection(this.resize.element, pointerPosition)}-resize`);
     }
     else {
       this.hoveredHandle = undefined;
@@ -442,7 +482,7 @@ export class AppComponent implements OnInit {
       }
       this.hoveredCircle = this.getCircleAt(pointerPosition);
       if (this.hoveredCircle) {
-        this.sketchCanvas.style.setProperty('--cursor', `${this.getDirection(this.hoveredCircle, pointerPosition)}-resize`);
+        this.sketchCanvas.style.setProperty('--cursor', `${Geometry.getDirection(this.hoveredCircle, pointerPosition)}-resize`);
         return;
       }
 
@@ -469,7 +509,7 @@ export class AppComponent implements OnInit {
       return;
     }
     return this.handles.find((handle) => {
-      const distance = this.getDistance(point, handle);
+      const distance = Geometry.getDistance(point, handle);
       return distance <= this.handleRadius;
     });
   }
@@ -478,77 +518,26 @@ export class AppComponent implements OnInit {
     if (!this.displayConstructionLines) {
       return;
     }
-    const margin = 10 * this.scale;
+    const margin = 10 * this.sketchScale;
     return this.circles.find((circle) => {
-      const distance = this.getDistance(point, circle);
+      const distance = Geometry.getDistance(point, circle);
       return Math.abs(distance - circle.radius) <= margin;
     });
   }
 
-  private getDistance(point1: Point, point2: Point): number {
-    return Math.hypot(point1.x - point2.x, point1.y - point2.y);
-  }
-
-  private getArcLength(circle: Circle, startAngle: number, endAngle: number): number {
-    const angle = Math.abs(endAngle - startAngle);
-    return angle * circle.radius;
-  }
-
-  private getDirection(point1: Point, point2: Point): 'ns' | 'ew' | 'nesw' | 'nwse' {
-    let angle = this.getAngle(point1, point2);
-    const sign = Math.sign(angle);
-    angle = Math.abs(angle);
-    if (angle >= SIXTEENTH_CIRCLE && angle < QUARTER_CIRCLE - SIXTEENTH_CIRCLE) {
-      return sign < 0 ? 'nesw' : 'nwse';
-    }
-    if (angle >= QUARTER_CIRCLE - SIXTEENTH_CIRCLE && angle < QUARTER_CIRCLE + SIXTEENTH_CIRCLE) {
-      return 'ns';
-    }
-    if (angle >= QUARTER_CIRCLE + SIXTEENTH_CIRCLE && angle < HALF_CIRCLE - SIXTEENTH_CIRCLE) {
-      return sign < 0 ? 'nwse' : 'nesw';
-    }
-    return 'ew';
-  }
-
-  private getAngle(point1: Point, point2: Point): number {
-    return Math.atan2((point2.y - point1.y), (point2.x - point1.x));
-  }
-
   private getPointerPositionAt(event: PointerEvent): Point {
     return {
-      x: (event.pageX - this.sketchCanvasOffset.x) * this.scale,
-      y: (event.pageY - this.sketchCanvasOffset.y) * this.scale,
-    };
-  }
-
-  private getTangent(circle1: Circle, circle2: Circle, invert?: boolean): Segment | undefined {
-    const distanceX = circle2.x - circle1.x;
-    const distanceY = circle2.y - circle1.y;
-    const hypotenuse = Math.hypot(distanceX, distanceY);
-    if (hypotenuse <= circle1.radius + circle2.radius) {
-      return undefined;
-    }
-    const shortSide = circle1.radius + circle2.radius;
-    const angle = Math.atan2(distanceY, distanceX) + (invert ? -1 : 1) * Math.asin(shortSide / hypotenuse) + (invert ? 1 : -1) * QUARTER_CIRCLE;
-    const oppositeAngle = angle + HALF_CIRCLE;
-    return {
-      p1: {
-        x: circle1.x + circle1.radius * Math.cos(angle),
-        y: circle1.y + circle1.radius * Math.sin(angle),
-      },
-      p2: {
-        x: circle2.x + circle2.radius * Math.cos(oppositeAngle),
-        y: circle2.y + circle2.radius * Math.sin(oppositeAngle),
-      },
+      x: (event.pageX - this.sketchCanvasOffset.x) * this.sketchScale,
+      y: (event.pageY - this.sketchCanvasOffset.y) * this.sketchScale,
     };
   }
 
   private clampX(value: number): number {
-    return Math.min(Math.max(0, value), this.width);
+    return Math.min(Math.max(0, value), this.sketchWidth);
   }
 
   private clampY(value: number): number {
-    return Math.min(Math.max(0, value), this.height);
+    return Math.min(Math.max(0, value), this.sketchHeight);
   }
 
   private clampRadius(value: number): number {
