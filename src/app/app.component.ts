@@ -244,6 +244,8 @@ export class AppComponent implements OnInit {
     // Circle arcs
     this.drawArc(this.legCircle, legStartAngle, legEndAngle, true);
     this.drawArc(this.backCircle, backStartAngle, backEndAngle);
+    this.legArcLength = Math.round(Geometry.getArcLength(this.legCircle.radius, legStartAngle, legEndAngle));
+    this.backArcLength = Math.round(Geometry.getArcLength(this.backCircle.radius, backStartAngle, backEndAngle));
 
     // Circles angles
     if (this.displayConstructionLines) {
