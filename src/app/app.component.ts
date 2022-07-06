@@ -44,7 +44,7 @@ export class AppComponent implements OnInit {
   protected legArcLength = 0;
   protected backArcLength = 0;
   protected remainingLength = 0;
-  protected lintelHeight = 40;
+  protected lintelHeight = 60;
   protected displayConstructionLines = true;
   protected displayConstructionHandles = true;
   protected displayLaths = true;
