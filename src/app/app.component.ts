@@ -36,7 +36,7 @@ export class AppComponent implements OnInit {
   private readonly lineDash = [8 * this.sketchScale, 10 * this.sketchScale];
 
   protected lathWidth = 55;
-  protected lathGap = 18;
+  protected lathGap = 10;
   protected lathCount = 0;
   protected legTangentLength = 0;
   protected middleTangentLength = 0;
